@@ -1,61 +1,146 @@
 import Cocoa
 import WebKit
+import ServiceManagement
 
-// Claude 使用履歴ダッシュボード（ネイティブアプリ）
-// 起動時に build_usage.py で集計し、専用ウィンドウ（WKWebView）で表示する。⌘R で再集計。
+// Claude 使用履歴ダッシュボード（メニューバー常駐アプリ）
+// メニューバーに今日のトークン数を表示し、クリックで詳細メニュー、
+// 「ダッシュボードを開く」で専用ウィンドウ（WKWebView）を表示する。10 分ごとに自動集計する。
 
 let info = Bundle.main.infoDictionary ?? [:]
 let dashboardDir = info["DashboardDir"] as? String ?? ""
 let pythonPath = info["PythonPath"] as? String ?? "/usr/bin/python3"
+let dashboardURL = URL(fileURLWithPath: dashboardDir)
+let htmlURL = dashboardURL.appendingPathComponent("claude-usage-dashboard.html")
 let logURL = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Logs/claude-usage-dashboard.log")
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
-    var window: NSWindow!
-    var webView: WKWebView!
+struct Stats {
+    var today = 0, todayResponses = 0, week = 0
+}
+
+func tok(_ n: Int) -> String {
+    let v = Double(n)
+    if v >= 1e9 { return String(format: "%.2fB", v / 1e9) }
+    if v >= 1e6 { return String(format: "%.1fM", v / 1e6) }
+    if v >= 1e3 { return String(format: "%.1fK", v / 1e3) }
+    return String(n)
+}
+
+/// 集計済み HTML に埋め込まれた JSON から、今日と直近 7 日の数字を取り出す
+func loadStats() -> Stats? {
+    guard let s = try? String(contentsOf: htmlURL, encoding: .utf8),
+          let a = s.range(of: "/*DATA*/"),
+          let b = s.range(of: "/*END*/", range: a.upperBound..<s.endIndex) else { return nil }
+    let json = String(s[a.upperBound..<b.lowerBound])
+    guard json != "null",
+          let obj = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+          let daily = obj["daily"] as? [[String: Any]] else { return nil }
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.dateFormat = "yyyy-MM-dd"
+    let now = Date()
+    let today = f.string(from: now)
+    let cutoff = f.string(from: now.addingTimeInterval(-6 * 86400))
+    var st = Stats()
+    for d in daily {
+        guard let day = d["d"] as? String, let t = d["t"] as? Int else { continue }
+        if day == today { st.today = t; st.todayResponses = d["r"] as? Int ?? 0 }
+        if day >= cutoff && day <= today { st.week += t }
+    }
+    return st
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var statusItem: NSStatusItem!
+    var window: NSWindow?
+    var webView: WKWebView?
     var busy = false
+    var stats: Stats?
+    var lastUpdated: Date?
+    var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        buildMenu()
-        webView = WKWebView(frame: .zero)
-        webView.navigationDelegate = self
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
-                          styleMask: [.titled, .closable, .miniaturizable, .resizable],
-                          backing: .buffered, defer: false)
-        window.title = "Claude 使用履歴"
-        window.contentView = webView
-        window.setFrameAutosaveName("MainWindow")
-        if !window.setFrameUsingName("MainWindow") { window.center() }
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        buildMainMenu()
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let img = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "Claude 使用履歴") {
+            img.isTemplate = true
+            statusItem.button?.image = img
+        }
+        stats = loadStats()
+        updateStatusItem()
         refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in self?.refresh() }
+
+        // ログイン時の自動起動ではウィンドウを開かない
+        var loginLaunch = false
+        if let ev = NSAppleEventManager.shared().currentAppleEvent,
+           let prop = ev.paramDescriptor(forKeyword: AEKeyword(keyAEPropData)),
+           prop.enumCodeValue == AEKeyword(keyAELaunchedAsLogInItem) { loginLaunch = true }
+        if !loginLaunch { showWindow() }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { window.makeKeyAndOrderFront(nil) }
+        showWindow()
         return true
     }
+
+    // MARK: ステータス表示
+
+    func updateStatusItem() {
+        statusItem.button?.title = stats.map { " " + tok($0.today) } ?? ""
+        let menu = NSMenu()
+        func label(_ s: String) {
+            let item = NSMenuItem(title: s, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        }
+        if let s = stats {
+            label("今日: \(tok(s.today)) トークン（応答 \(s.todayResponses) 件）")
+            label("直近7日間: \(tok(s.week)) トークン")
+        } else {
+            label("集計データがありません")
+        }
+        if let t = lastUpdated {
+            let f = DateFormatter(); f.dateFormat = "HH:mm"
+            label("最終更新: \(f.string(from: t))")
+        }
+        menu.addItem(.separator())
+        let open = NSMenuItem(title: "ダッシュボードを開く", action: #selector(openDashboard), keyEquivalent: "o")
+        open.target = self
+        menu.addItem(open)
+        let reload = NSMenuItem(title: busy ? "集計中…" : "今すぐ更新", action: #selector(refresh), keyEquivalent: "r")
+        reload.target = self
+        reload.isEnabled = !busy
+        menu.addItem(reload)
+        menu.addItem(.separator())
+        let login = NSMenuItem(title: "ログイン時に起動", action: #selector(toggleLogin), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(login)
+        menu.addItem(NSMenuItem(title: "終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        statusItem.menu = menu
+    }
+
+    // MARK: 集計
 
     @objc func refresh() {
         if busy { return }
         busy = true
-        window.title = "Claude 使用履歴 — 集計中…"
+        updateStatusItem()
         DispatchQueue.global().async {
             let (ok, message) = self.runBuild()
             DispatchQueue.main.async {
                 self.busy = false
-                self.window.title = "Claude 使用履歴"
                 if ok {
-                    let html = URL(fileURLWithPath: dashboardDir).appendingPathComponent("claude-usage-dashboard.html")
-                    self.webView.loadFileURL(html, allowingReadAccessTo: URL(fileURLWithPath: dashboardDir))
+                    self.stats = loadStats()
+                    self.lastUpdated = Date()
+                    self.reloadWebView()
                 } else {
-                    let alert = NSAlert()
-                    alert.messageText = "集計に失敗しました"
-                    alert.informativeText = "\(message)\n\nログ: ~/Library/Logs/claude-usage-dashboard.log"
-                    alert.runModal()
+                    NSLog("build failed: %@", message)
                 }
+                self.updateStatusItem()
             }
         }
     }
@@ -67,8 +152,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: pythonPath)
-        p.arguments = [URL(fileURLWithPath: dashboardDir).appendingPathComponent("build_usage.py").path]
-        p.currentDirectoryURL = URL(fileURLWithPath: dashboardDir)
+        p.arguments = [dashboardURL.appendingPathComponent("build_usage.py").path]
+        p.currentDirectoryURL = dashboardURL
         if let h = try? FileHandle(forWritingTo: logURL) {
             h.seekToEndOfFile()
             h.write("== \(Date())\n".data(using: .utf8)!)
@@ -84,18 +169,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         return (p.terminationStatus == 0, "build_usage.py が終了コード \(p.terminationStatus) で終了しました")
     }
 
-    func buildMenu() {
+    // MARK: ウィンドウ
+
+    @objc func openDashboard() { showWindow() }
+
+    func showWindow() {
+        if window == nil {
+            let wv = WKWebView(frame: .zero)
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
+                             styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                             backing: .buffered, defer: false)
+            w.title = "Claude 使用履歴"
+            w.contentView = wv
+            w.isReleasedWhenClosed = false
+            w.setFrameAutosaveName("MainWindow")
+            if !w.setFrameUsingName("MainWindow") { w.center() }
+            window = w
+            webView = wv
+        }
+        reloadWebView()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func reloadWebView() {
+        guard let wv = webView, FileManager.default.fileExists(atPath: htmlURL.path) else { return }
+        wv.loadFileURL(htmlURL, allowingReadAccessTo: dashboardURL)
+    }
+
+    // MARK: ログイン時起動
+
+    @objc func toggleLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "ログイン時の起動を変更できませんでした"
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
+        }
+        updateStatusItem()
+    }
+
+    // ウィンドウ内で使うショートカット（⌘R, ⌘W, ⌘Q）用のメインメニュー
+    func buildMainMenu() {
         let main = NSMenu()
         let appItem = NSMenuItem(); main.addItem(appItem)
         let appMenu = NSMenu(); appItem.submenu = appMenu
-        appMenu.addItem(withTitle: "Claude 使用履歴を終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-
+        appMenu.addItem(withTitle: "終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let viewItem = NSMenuItem(); main.addItem(viewItem)
         let viewMenu = NSMenu(title: "表示"); viewItem.submenu = viewMenu
         let reload = NSMenuItem(title: "最新のデータに更新", action: #selector(refresh), keyEquivalent: "r")
         reload.target = self
         viewMenu.addItem(reload)
-
         let winItem = NSMenuItem(); main.addItem(winItem)
         let winMenu = NSMenu(title: "ウインドウ"); winItem.submenu = winMenu
         winMenu.addItem(withTitle: "閉じる", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
@@ -108,5 +238,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.regular)
+app.setActivationPolicy(.accessory)
 app.run()
