@@ -6,6 +6,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PY="$(command -v python3 || true)"
 [ -n "$PY" ] || { echo "python3 が見つかりません" >&2; exit 1; }
+HTML_URL="$("$PY" -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).as_uri())' "$DIR/claude-usage-dashboard.html")"
 OUT_DIR="${1:-$HOME/Applications}"
 APP="$OUT_DIR/Claude使用履歴.app"
 mkdir -p "$APP/Contents/MacOS"
@@ -38,6 +39,12 @@ if [ \$? -ne 0 ]; then
   osascript -e 'display dialog "集計に失敗しました。~/Library/Logs/claude-usage-dashboard.log を確認してください。" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
   exit 1
 fi
+# Chrome 系ブラウザがあれば、タブやアドレスバーの無い「アプリ用ウィンドウ」で開く
+for B in "Google Chrome" "Microsoft Edge" "Brave Browser"; do
+  if [ -d "/Applications/\$B.app" ]; then
+    open -na "\$B" --args --app="$HTML_URL" && exit 0
+  fi
+done
 open "$DIR/claude-usage-dashboard.html"
 LAUNCHER
 chmod +x "$APP/Contents/MacOS/launcher"
