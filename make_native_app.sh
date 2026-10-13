@@ -11,7 +11,8 @@ command -v swiftc >/dev/null || { echo "swiftc が見つかりません。'xcode
 OUT_DIR="${1:-$HOME/Applications}"
 APP="$OUT_DIR/Claude使用履歴.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$DIR/native/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 swiftc -O "$DIR/native/main.swift" -o "$APP/Contents/MacOS/ClaudeUsage" -framework Cocoa -framework WebKit
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -22,6 +23,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<key>CFBundleDisplayName</key><string>Claude使用履歴</string>
 	<key>CFBundleIdentifier</key><string>local.claude-usage-dashboard.native</string>
 	<key>CFBundleExecutable</key><string>ClaudeUsage</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleVersion</key><string>1</string>
 	<key>NSHighResolutionCapable</key><true/>

@@ -125,6 +125,7 @@ Windows / Linux では、タスクスケジューラや cron で `python3 build_
 | `build_usage.py` | ログを集計して、ダッシュボードの HTML を作るスクリプト |
 | `template.html` | ダッシュボードの雛形（データは空） |
 | `claude-usage-dashboard.html` | **実行すると作られる完成品**（あなたの使用履歴が入る。git の管理外） |
+| `native/AppIcon.icns` / `native/make_icon.swift` | アプリのアイコンと、それを描くスクリプト |
 | `make_native_app.sh` / `native/main.swift` | macOS で専用ウィンドウのアプリを作るスクリプトとそのソース（任意） |
 | `make_app.sh` | macOS でクリック起動用の `.app` を作るスクリプト（任意） |
 | `install_launchd.sh` | macOS で自動更新を設定するスクリプト（任意） |
