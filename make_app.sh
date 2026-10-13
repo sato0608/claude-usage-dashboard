@@ -26,9 +26,16 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 cat > "$APP/Contents/MacOS/launcher" <<LAUNCHER
 #!/bin/bash
-cd "$DIR" || exit 1
-if ! "$PY" build_usage.py >> build_usage.log 2>&1; then
-  osascript -e 'display dialog "集計に失敗しました。build_usage.log を確認してください。" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
+# ログはアプリ用の場所に出す（フォルダの権限に左右されないように）
+LOG="\$HOME/Library/Logs/claude-usage-dashboard.log"
+mkdir -p "\$(dirname "\$LOG")"
+{
+  echo "== \$(date)"
+  cd "$DIR" || exit 1
+  "$PY" build_usage.py
+} >> "\$LOG" 2>&1
+if [ \$? -ne 0 ]; then
+  osascript -e 'display dialog "集計に失敗しました。~/Library/Logs/claude-usage-dashboard.log を確認してください。" buttons {"OK"} default button 1 with icon caution' >/dev/null 2>&1
   exit 1
 fi
 open "$DIR/claude-usage-dashboard.html"

@@ -70,7 +70,7 @@ Windows では `python build_usage.py` です。
 - 起動するたびに集計し直すので、常に最新が表示されます。集計に数秒かかります
 - フォルダを移動したら、`./make_app.sh` をもう一度実行してください
 - 初回起動時に「"Claude使用履歴" がデスクトップ上のフォルダにアクセスしようとしています」と出たら、「許可」を選んでください
-- 失敗したときは `build_usage.log` に原因が記録されます
+- 失敗したときは `~/Library/Logs/claude-usage-dashboard.log` に原因が記録されます
 - 「実行できない」と言われたら、先に `chmod +x make_app.sh` を実行してください
 
 ## 自動で更新する（macOS のみ）
