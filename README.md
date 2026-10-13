@@ -52,6 +52,27 @@ Windows では `python build_usage.py` です。
 
 もう一度 `python3 build_usage.py` を実行して、ブラウザで開き直す（再読み込みする）と、最新になります。
 
+## アプリのように起動する（macOS のみ）
+
+ターミナルを使わず、クリックだけで「最新に集計 → ブラウザで開く」を行えます。
+
+```bash
+./make_app.sh
+```
+
+`~/Applications/Claude使用履歴.app` が作られます。
+
+1. Finder で `~/Applications` を開く（メニューの「移動」→「ホーム」→ `Applications`）
+2. `Claude使用履歴` をダブルクリックして起動する
+3. Dock にドラッグしておくと、いつでもワンクリックで起動できる
+
+補足:
+- 起動するたびに集計し直すので、常に最新が表示されます。集計に数秒かかります
+- フォルダを移動したら、`./make_app.sh` をもう一度実行してください
+- 初回起動時に「"Claude使用履歴" がデスクトップ上のフォルダにアクセスしようとしています」と出たら、「許可」を選んでください
+- 失敗したときは `build_usage.log` に原因が記録されます
+- 「実行できない」と言われたら、先に `chmod +x make_app.sh` を実行してください
+
 ## 自動で更新する（macOS のみ）
 
 1 時間ごとに自動で集計したい場合は、フォルダの中で次を実行します。
@@ -87,6 +108,7 @@ Windows / Linux では、タスクスケジューラや cron で `python3 build_
 | `build_usage.py` | ログを集計して、ダッシュボードの HTML を作るスクリプト |
 | `template.html` | ダッシュボードの雛形（データは空） |
 | `claude-usage-dashboard.html` | **実行すると作られる完成品**（あなたの使用履歴が入る。git の管理外） |
+| `make_app.sh` | macOS でクリック起動用の `.app` を作るスクリプト（任意） |
 | `install_launchd.sh` | macOS で自動更新を設定するスクリプト（任意） |
 | `LICENSE` | MIT ライセンス |
 
