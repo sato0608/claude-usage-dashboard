@@ -52,7 +52,23 @@ Windows では `python build_usage.py` です。
 
 もう一度 `python3 build_usage.py` を実行して、ブラウザで開き直す（再読み込みする）と、最新になります。
 
-## アプリのように起動する（macOS のみ）
+## 専用ウィンドウのアプリにする（macOS のみ・おすすめ）
+
+ブラウザを使わず、独立したウィンドウと Dock アイコンを持つアプリを作れます。
+
+```bash
+./make_native_app.sh
+```
+
+`~/Applications/Claude使用履歴.app` が作られます。ダブルクリックで起動し、Dock にドラッグしておくと便利です。
+
+- 起動するたびに集計し直します。起動中に最新にしたいときは **⌘R**（メニューの「表示」→「最新のデータに更新」）
+- 必要なもの: Xcode Command Line Tools（無ければ `xcode-select --install`）と Python 3
+- 初回起動時に「デスクトップ上のフォルダへのアクセス」の確認が出たら、「許可」を選んでください（許可するまで集計が止まったままになります）
+- フォルダを移動したら、`./make_native_app.sh` をもう一度実行してください
+- 失敗したときは `~/Library/Logs/claude-usage-dashboard.log` に原因が記録されます
+
+## 簡易アプリ（クリックで起動・ブラウザで開く）（macOS のみ）
 
 ターミナルを使わず、クリックだけで「最新に集計 → ブラウザで開く」を行えます。
 
@@ -60,7 +76,7 @@ Windows では `python build_usage.py` です。
 ./make_app.sh
 ```
 
-`~/Applications/Claude使用履歴.app` が作られます。
+`~/Applications/Claude使用履歴.app` が作られます（上の専用ウィンドウ版と同じ名前なので、どちらか一方だけ作ってください）。
 
 1. Finder で `~/Applications` を開く（メニューの「移動」→「ホーム」→ `Applications`）
 2. `Claude使用履歴` をダブルクリックして起動する
@@ -109,6 +125,7 @@ Windows / Linux では、タスクスケジューラや cron で `python3 build_
 | `build_usage.py` | ログを集計して、ダッシュボードの HTML を作るスクリプト |
 | `template.html` | ダッシュボードの雛形（データは空） |
 | `claude-usage-dashboard.html` | **実行すると作られる完成品**（あなたの使用履歴が入る。git の管理外） |
+| `make_native_app.sh` / `native/main.swift` | macOS で専用ウィンドウのアプリを作るスクリプトとそのソース（任意） |
 | `make_app.sh` | macOS でクリック起動用の `.app` を作るスクリプト（任意） |
 | `install_launchd.sh` | macOS で自動更新を設定するスクリプト（任意） |
 | `LICENSE` | MIT ライセンス |
