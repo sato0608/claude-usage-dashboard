@@ -121,15 +121,26 @@ def build(rows):
         x['t'] += r['inp'] + r['out']; x['o'] += r['out']; x['r'] += 1; x['project'] = r['project']
         x['start'] = min(x['start'] or r['ts'], r['ts']); x['end'] = max(x['end'] or r['ts'], r['ts'])
         x['models'][r['model']] += r['inp'] + r['out']
-    sessions = sorted(({'start': v['start'].strftime('%Y-%m-%d %H:%M'), 'min': round((v['end'] - v['start']).total_seconds() / 60),
+    sessions = sorted(({'sid': k, 'start': v['start'].strftime('%Y-%m-%d %H:%M'), 'min': round((v['end'] - v['start']).total_seconds() / 60),
                         'project': v['project'], 'model': v['models'].most_common(1)[0][0], 'r': v['r'], 't': v['t'], 'o': v['o']}
-                       for v in ses.values()), key=lambda x: x['start'], reverse=True)
+                       for k, v in ses.items()), key=lambda x: x['start'], reverse=True)
+    sid_index = {s['sid']: i for i, s in enumerate(sessions)}
+    for s in sessions:
+        del s['sid']
+
+    # 期間で絞り込むための内訳（日 × セッション × フォルダ × モデル）。i は sessions の添字
+    cell = collections.defaultdict(lambda: dict(t=0, o=0, r=0))
+    for r in rows:
+        c = cell[(r['day'], sid_index[r['session']], r['project'], r['model'])]
+        c['t'] += r['inp'] + r['out']; c['o'] += r['out']; c['r'] += 1
+    dpm = [dict(d=k[0].isoformat(), i=k[1], p=k[2], m=k[3], t=v['t'], o=v['o'], r=v['r'])
+           for k, v in sorted(cell.items(), key=lambda kv: (kv[0][0], kv[0][1], kv[0][2], kv[0][3]))]
     for m_ in models:
         m_['avg'] = round(m_['t'] / m_['r']) if m_['r'] else 0
 
     return dict(sessions=sessions, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), start=start.isoformat(), end=today.isoformat(),
                 totals=dict(t=sum(r['inp'] + r['out'] for r in rows), r=len(rows), s=len({r['session'] for r in rows})),
-                daily=daily, kpis=kpis, kpi_sets=kpi_sets, weeks=list(weeks.values()), projects=projects, models=models)
+                daily=daily, dpm=dpm, kpis=kpis, kpi_sets=kpi_sets, weeks=list(weeks.values()), projects=projects, models=models)
 
 
 if __name__ == '__main__':

@@ -270,7 +270,7 @@ body.is-loading .skeleton{display:block}
       <article class="card kpi" data-kpi="3"></article>
 
       <article class="card span-8">
-        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計</p></div></div>
+        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
         <div class="skeleton"><div class="sk sk-chart"></div></div>
         <div class="content"><div class="chart" id="dayChart"><div class="tip"></div></div></div>
         <div class="empty">
@@ -281,14 +281,14 @@ body.is-loading .skeleton{display:block}
       </article>
 
       <article class="card span-4">
-        <div class="card-h"><div><h2>週ごとの応答数</h2><p>月曜始まり・横軸は週の初日</p></div></div>
+        <div class="card-h"><div><h2 id="weekTitle">週ごとの応答数</h2><p id="weekNote">月曜始まり・横軸は週の初日</p></div></div>
         <div class="skeleton"><div class="sk-bars"><div class="sk" style="height:40%"></div><div class="sk" style="height:55%"></div><div class="sk" style="height:45%"></div><div class="sk" style="height:70%"></div><div class="sk" style="height:60%"></div><div class="sk" style="height:80%"></div><div class="sk" style="height:75%"></div><div class="sk" style="height:90%"></div></div></div>
         <div class="content"><div class="chart" id="weekChart"><div class="tip"></div></div></div>
         <div class="empty"><h3>まだ応答がありません</h3><p>最初のセッションのあとに表示されます。</p></div>
       </article>
 
       <article class="card span-7">
-        <div class="card-h"><div><h2>よく使ったプロジェクト</h2><p>トークン数の多い順・上位6件</p></div></div>
+        <div class="card-h"><div><h2>よく使ったプロジェクト</h2><p>トークン数の多い順・上位6件 · <span data-period-label></span></p></div></div>
         <div class="skeleton" id="tableSk"></div>
         <div class="content">
           <div class="table-wrap">
@@ -302,7 +302,7 @@ body.is-loading .skeleton{display:block}
       </article>
 
       <article class="card span-5">
-        <div class="card-h"><div><h2>モデル別の内訳</h2><p>全期間のトークン数の割合</p></div></div>
+        <div class="card-h"><div><h2>モデル別の内訳</h2><p><span data-period-label></span>のトークン数の割合</p></div></div>
         <div class="skeleton"><div class="sk sk-line" style="height:40px"></div><div class="sk sk-line" style="height:40px"></div><div class="sk sk-line" style="height:40px;width:80%"></div></div>
         <div class="content"><div class="models" id="modelList"></div><div class="model-note" id="modelNote"></div></div>
         <div class="empty"><h3>モデルの記録はまだありません</h3></div>
@@ -311,11 +311,11 @@ body.is-loading .skeleton{display:block}
 
     <section class="grid view" data-view="tokens" hidden>
       <article class="card" style="grid-column:1/-1">
-        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計</p></div></div>
+        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
         <div class="chart" id="dayChart2"><div class="tip"></div></div>
       </article>
       <article class="card" style="grid-column:1/-1">
-        <div class="card-h"><div><h2>日別の内訳</h2><p>新しい日付順・使用のあった日のみ</p></div></div>
+        <div class="card-h"><div><h2>日別の内訳</h2><p>新しい日付順・使用のあった日のみ · <span data-period-label></span></p></div></div>
         <div class="table-wrap"><table><thead><tr><th>日付</th><th class="r">合計</th><th class="r">入力</th><th class="r">出力</th><th class="r">応答</th><th class="r">セッション</th></tr></thead><tbody id="dayBody"></tbody></table></div>
       </article>
     </section>
@@ -329,13 +329,13 @@ body.is-loading .skeleton{display:block}
 
     <section class="grid view" data-view="projects" hidden>
       <article class="card" style="grid-column:1/-1">
-        <div class="card-h"><div><h2>すべてのプロジェクト</h2><p>トークン数の多い順</p></div></div>
+        <div class="card-h"><div><h2>すべてのプロジェクト</h2><p>トークン数の多い順 · <span data-period-label></span></p></div></div>
         <div class="table-wrap"><table><thead><tr><th>フォルダ</th><th class="r">セッション</th><th class="r">トークン</th><th class="r">割合</th><th>主なモデル</th><th class="r">最終利用</th></tr></thead><tbody id="projAllBody"></tbody></table></div>
       </article>
     </section>
 
     <section class="grid view" data-view="models" hidden>
-      <article class="card span-5"><div class="card-h"><div><h2>トークン数の割合</h2><p>全期間</p></div></div><div class="models" id="modelList2"></div></article>
+      <article class="card span-5"><div class="card-h"><div><h2>トークン数の割合</h2><p data-period-label></p></div></div><div class="models" id="modelList2"></div></article>
       <article class="card span-7">
         <div class="card-h"><div><h2>モデル別の詳細</h2><p>1応答あたりの平均は入力＋出力の合計</p></div></div>
         <div class="table-wrap"><table><thead><tr><th>モデル</th><th class="r">応答</th><th class="r">トークン</th><th class="r">1応答あたり</th></tr></thead><tbody id="modelBody"></tbody></table></div>
@@ -476,30 +476,87 @@ const USAGE = /*DATA*/null/*END*/;
     svg.querySelectorAll('.hit').forEach(h => {
       h.addEventListener('pointerenter', () => { const i = +h.dataset.i, bx = svg.getBoundingClientRect();
         bars.forEach((b,j) => b.classList.toggle('dim', j !== i));
-        tip.innerHTML = `<span>${weeks[i].label} からの週</span><b>${int(data[i])}件</b><span>${tok(weeks[i].t)} トークン</span>`;
+        tip.innerHTML = `<span>${weeks[i].tip || (weeks[i].label + ' からの週')}</span><b>${int(data[i])}件</b><span>${tok(weeks[i].t)} トークン</span>`;
         tip.style.left = ((m.l + (i+.5)*band) / W * bx.width) + 'px'; tip.style.top = (y(data[i]) / H * bx.height) + 'px'; tip.style.opacity = 1; });
       h.addEventListener('pointerleave', () => { bars.forEach(b => b.classList.remove('dim')); tip.style.opacity = 0; });
     });
   }
 
-  /* ---------- table + model list ---------- */
-  if (!empty) {
-    document.getElementById('projBody').innerHTML = USAGE.projects.slice(0,6).map(p => `<tr><td><div class="acct"><span class="av">${esc([...p.name][0].toUpperCase())}</span>${esc(p.name)}</div></td><td class="r num">${int(p.s)}</td><td class="r num">${tok(p.t)}</td><td><span class="chip">${esc(p.model)}</span></td><td class="r num">${md(p.last)}</td></tr>`).join('');
-    document.getElementById('modelList').innerHTML = USAGE.models.map(mo => `<div class="model-row"><strong>${esc(mo.name)}</strong><span class="num">${(mo.share*100).toFixed(1)}% · ${tok(mo.t)}</span><div class="share"><i style="transform:scaleX(${mo.share})"></i></div></div>`).join('');
-    document.getElementById('modelNote').textContent = `全期間：${tok(USAGE.totals.t)} トークン · 応答 ${int(USAGE.totals.r)}件 · セッション ${int(USAGE.totals.s)}件`;
+  /* ---------- 期間で絞り込んだ集計（グラフ・一覧） ---------- */
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const parseD = iso => { const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); };
+  const addDays = (iso, n) => { const d = parseD(iso); d.setDate(d.getDate() + n); return ymd(d); };
+  const winFrom = () => period === '0' ? '0000-00-00' : addDays(USAGE.end, -(+period - 1));
+  const winRows = () => { const from = winFrom(); return (USAGE.dpm || []).filter(x => x.d >= from && x.d <= USAGE.end); };
+  /* 折れ線グラフに出す日々。「今日」は 1 日だけだと線にならないので、直近 7 日間を出す */
+  function chartDays() {
+    if (period === '0') return USAGE.daily;
+    const from = addDays(USAGE.end, -(Math.max(+period, 7) - 1));
+    return USAGE.daily.filter(d => d.d >= from);
   }
-  if (!empty) {
-    const pct = x => (x*100).toFixed(1) + '%', all = USAGE.totals.t || 1;
-    document.getElementById('dayBody').innerHTML = USAGE.daily.filter(d => d.r).reverse().map(d => `<tr><td>${jd(d.d)}</td><td class="r num">${tok(d.t)}</td><td class="r num">${tok(d.t - d.o)}</td><td class="r num">${tok(d.o)}</td><td class="r num">${int(d.r)}</td><td class="r num">${d.s}</td></tr>`).join('');
-    document.getElementById('sessNote').textContent = `新しい順 · 全${USAGE.sessions.length}件`;
-    document.getElementById('sessBody').innerHTML = USAGE.sessions.map(x => { const [d, t] = x.start.split(' ');
-      const dur = x.min >= 60 ? `${Math.floor(x.min/60)}時間${x.min%60}分` : `${x.min}分`;
-      return `<tr><td class="num">${md(d)} ${t}</td><td>${esc(x.project)}</td><td><span class="chip">${esc(x.model)}</span></td><td class="r num">${int(x.r)}</td><td class="r num">${tok(x.t)}</td><td class="r num">${tok(x.o)}</td><td class="r num">${dur}</td></tr>`; }).join('');
-    document.getElementById('projAllBody').innerHTML = USAGE.projects.map(p => `<tr><td><div class="acct"><span class="av">${esc([...p.name][0].toUpperCase())}</span>${esc(p.name)}</div></td><td class="r num">${int(p.s)}</td><td class="r num">${tok(p.t)}</td><td class="r num">${pct(p.t/all)}</td><td><span class="chip">${esc(p.model)}</span></td><td class="r num">${md(p.last)}</td></tr>`).join('');
+  /* 棒グラフ: 7 日以内は日ごと、それより長い期間は週ごと */
+  function barData() {
+    const p = +period;
+    if (p > 0 && p <= 7) return { weekly: false, items: chartDays().map(d => ({ label: md(d.d), r: d.r, t: d.t, tip: jd(d.d) })) };
+    const from = winFrom(), m = new Map();
+    USAGE.daily.filter(d => d.d >= from).forEach(d => {
+      const mon = addDays(d.d, -((parseD(d.d).getDay() + 6) % 7));
+      const w = m.get(mon) || { label: md(mon), r: 0, t: 0, tip: md(mon) + ' からの週' };
+      w.r += d.r; w.t += d.t; m.set(mon, w);
+    });
+    return { weekly: true, items: [...m.values()] };
+  }
+  const noRow = n => `<tr><td colspan="${n}" style="color:var(--muted);padding:18px">この期間の記録はありません</td></tr>`;
+  function renderLists() {
+    if (empty) return;
+    const label = PERIOD_LABEL[period], rows = winRows(), bd = barData();
+    document.querySelectorAll('[data-period-label]').forEach(el => el.textContent = label);
+    document.querySelectorAll('[data-day-note]').forEach(el => el.textContent = period === '1' ? '（今日は 1 日分のため、直近7日間を表示）' : '');
+    document.getElementById('weekTitle').textContent = bd.weekly ? '週ごとの応答数' : '日ごとの応答数';
+    document.getElementById('weekNote').textContent = bd.weekly ? '月曜始まり・横軸は週の初日' : '横軸は日付';
+
+    const topModel = m => [...m.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    const P = new Map(), M = new Map(), S = new Map();
+    let sumT = 0, sumR = 0;
+    rows.forEach(x => {
+      sumT += x.t; sumR += x.r;
+      const p = P.get(x.p) || { name: x.p, t: 0, s: new Set(), last: '', m: new Map() };
+      p.t += x.t; p.s.add(x.i); if (x.d > p.last) p.last = x.d; p.m.set(x.m, (p.m.get(x.m) || 0) + x.t); P.set(x.p, p);
+      const mo = M.get(x.m) || { name: x.m, t: 0, r: 0 }; mo.t += x.t; mo.r += x.r; M.set(x.m, mo);
+      const s = S.get(x.i) || { i: x.i, t: 0, o: 0, r: 0, m: new Map() };
+      s.t += x.t; s.o += x.o; s.r += x.r; s.m.set(x.m, (s.m.get(x.m) || 0) + x.t); S.set(x.i, s);
+    });
+    const projects = [...P.values()].map(p => ({ name: p.name, t: p.t, s: p.s.size, last: p.last, model: topModel(p.m) })).sort((a, b) => b.t - a.t);
+    const models = [...M.values()].sort((a, b) => b.t - a.t).map(m => ({ ...m, share: m.t / (sumT || 1), avg: m.r ? Math.round(m.t / m.r) : 0 }));
+    const sessions = [...S.values()].sort((a, b) => a.i - b.i);   // i は新しい順の添字
+    const pct = x => (x * 100).toFixed(1) + '%';
+    const projRow = p => `<tr><td><div class="acct"><span class="av">${esc([...p.name][0].toUpperCase())}</span>${esc(p.name)}</div></td><td class="r num">${int(p.s)}</td><td class="r num">${tok(p.t)}</td>`;
+
+    document.getElementById('projBody').innerHTML = projects.length
+      ? projects.slice(0, 6).map(p => `${projRow(p)}<td><span class="chip">${esc(p.model)}</span></td><td class="r num">${md(p.last)}</td></tr>`).join('') : noRow(5);
+    document.getElementById('projAllBody').innerHTML = projects.length
+      ? projects.map(p => `${projRow(p)}<td class="r num">${pct(p.t / (sumT || 1))}</td><td><span class="chip">${esc(p.model)}</span></td><td class="r num">${md(p.last)}</td></tr>`).join('') : noRow(6);
+    document.getElementById('modelList').innerHTML = models.length
+      ? models.map(mo => `<div class="model-row"><strong>${esc(mo.name)}</strong><span class="num">${(mo.share*100).toFixed(1)}% · ${tok(mo.t)}</span><div class="share"><i style="transform:scaleX(${mo.share})"></i></div></div>`).join('')
+      : '<div style="color:var(--muted)">この期間の記録はありません</div>';
     document.getElementById('modelList2').innerHTML = document.getElementById('modelList').innerHTML;
-    document.getElementById('modelBody').innerHTML = USAGE.models.map(mo => `<tr><td>${esc(mo.name)}</td><td class="r num">${int(mo.r)}</td><td class="r num">${tok(mo.t)}</td><td class="r num">${tok(mo.avg)}</td></tr>`).join('');
+    document.getElementById('modelBody').innerHTML = models.length
+      ? models.map(mo => `<tr><td>${esc(mo.name)}</td><td class="r num">${int(mo.r)}</td><td class="r num">${tok(mo.t)}</td><td class="r num">${tok(mo.avg)}</td></tr>`).join('') : noRow(4);
+    document.getElementById('modelNote').textContent = `${label}：${tok(sumT)} トークン · 応答 ${int(sumR)}件 · セッション ${int(sessions.length)}件`;
+
+    const from = winFrom();
+    document.getElementById('dayBody').innerHTML = USAGE.daily.filter(d => d.r && d.d >= from).reverse().map(d =>
+      `<tr><td>${jd(d.d)}</td><td class="r num">${tok(d.t)}</td><td class="r num">${tok(d.t - d.o)}</td><td class="r num">${tok(d.o)}</td><td class="r num">${int(d.r)}</td><td class="r num">${d.s}</td></tr>`).join('') || noRow(6);
+    document.getElementById('sessBadge').textContent = int(sessions.length);
+    document.getElementById('sessNote').textContent = `新しい順 · ${label}に活動のあった ${sessions.length} 件（トークン・応答はその期間内の分）`;
+    document.getElementById('sessBody').innerHTML = sessions.length ? sessions.map(s => {
+      const x = USAGE.sessions[s.i], [d, t] = x.start.split(' ');
+      const dur = x.min >= 60 ? `${Math.floor(x.min/60)}時間${x.min%60}分` : `${x.min}分`;
+      return `<tr><td class="num">${md(d)} ${t}</td><td>${esc(x.project)}</td><td><span class="chip">${esc(topModel(s.m))}</span></td><td class="r num">${int(s.r)}</td><td class="r num">${tok(s.t)}</td><td class="r num">${tok(s.o)}</td><td class="r num">${dur}</td></tr>`;
+    }).join('') : noRow(7);
     document.getElementById('genNote').textContent = `最終更新：${USAGE.generated}`;
   }
+  renderLists();
   document.getElementById('copyCmd').onclick = e => { const t = document.getElementById('cmdText').textContent;
     navigator.clipboard?.writeText(t).then(() => e.target.textContent = 'コピーしました', () => getSelection().selectAllChildren(document.getElementById('cmdText'))); };
   document.getElementById('tableSk').innerHTML = Array.from({length:5}, (_,i) => `<div class="sk-row"><div class="sk" style="width:26px;height:26px;border-radius:7px"></div><div class="sk" style="height:10px;width:${[38,30,34,26,32][i]}%"></div><div class="sk" style="height:10px;width:14%;margin-left:auto"></div><div class="sk" style="height:18px;width:64px;border-radius:99px"></div></div>`).join('');
@@ -507,7 +564,7 @@ const USAGE = /*DATA*/null/*END*/;
   /* ---------- loading → content ---------- */
   const body = document.body, dayHost = document.getElementById('dayChart'), weekHost = document.getElementById('weekChart'), dayHost2 = document.getElementById('dayChart2');
   let loading = false, timer;
-  function drawCharts(animate) { if (empty || loading) return; areaChart(dayHost, USAGE.daily, animate); areaChart(dayHost2, USAGE.daily, animate); barChart(weekHost, USAGE.weeks, animate);
+  function drawCharts(animate) { if (empty || loading) return; const cd = chartDays(); areaChart(dayHost, cd, animate); areaChart(dayHost2, cd, animate); barChart(weekHost, barData().items, animate);
     if (animate && !reduce) document.querySelectorAll('.share i').forEach(i => { const s = i.style.transform; i.style.transition = 'none'; i.style.transform = 'scaleX(0)'; i.offsetWidth; i.style.transition = ''; i.style.transform = s; }); }
   function load() {
     clearTimeout(timer); loading = true; body.classList.add('is-loading'); renderKpis();
@@ -521,7 +578,7 @@ const USAGE = /*DATA*/null/*END*/;
   const syncSeg = () => seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === period)));
   seg.addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (!b || b.dataset.p === period) return;
     period = b.dataset.p; store.set('ll-period', period); syncSeg();
-    if (!empty && !loading) { renderKpis(); countUp(); } });
+    if (!empty && !loading) { renderKpis(); countUp(); renderLists(); drawCharts(true); } });
   syncSeg();
 
   /* ---------- sidebar ---------- */
@@ -538,7 +595,7 @@ const USAGE = /*DATA*/null/*END*/;
     document.querySelectorAll('.nav a').forEach(n => n.removeAttribute('aria-current'));
     document.querySelector(`.nav a[data-view="${v}"]`)?.setAttribute('aria-current','page');
     document.getElementById('viewTitle').textContent = titles[v]; store.set('ll-view', v); drawer(false); scrollTo(0, 0);
-    if (v === 'tokens' && !empty && !loading) requestAnimationFrame(() => areaChart(dayHost2, USAGE.daily, true)); };
+    if (v === 'tokens' && !empty && !loading) requestAnimationFrame(() => areaChart(dayHost2, chartDays(), true)); };
   document.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); showView(a.dataset.view); }));
   showView(location.hash.slice(1) || store.get('ll-view') || 'overview');
   addEventListener('keydown', e => {
