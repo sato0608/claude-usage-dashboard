@@ -270,7 +270,7 @@ body.is-loading .skeleton{display:block}
       <article class="card kpi" data-kpi="3"></article>
 
       <article class="card span-8">
-        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
+        <div class="card-h"><div><h2 id="dayTitle1">1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
         <div class="skeleton"><div class="sk sk-chart"></div></div>
         <div class="content"><div class="chart" id="dayChart"><div class="tip"></div></div></div>
         <div class="empty">
@@ -311,7 +311,7 @@ body.is-loading .skeleton{display:block}
 
     <section class="grid view" data-view="tokens" hidden>
       <article class="card" style="grid-column:1/-1">
-        <div class="card-h"><div><h2>1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
+        <div class="card-h"><div><h2 id="dayTitle2">1日あたりのトークン数</h2><p>入力（キャッシュ含む）＋出力の合計 · <span data-period-label></span><span data-day-note></span></p></div></div>
         <div class="chart" id="dayChart2"><div class="tip"></div></div>
       </article>
       <article class="card" style="grid-column:1/-1">
@@ -455,19 +455,21 @@ const USAGE = /*DATA*/null/*END*/;
   }
 
   /* ---------- bar chart: weekly responses ---------- */
-  function barChart(host, weeks, animate) {
+  function barChart(host, weeks, animate, opts = {}) {
+    const byTokens = opts.key === 't';
     const tip = host.querySelector('.tip'); host.querySelector('svg')?.remove();
-    const data = weeks.map(w => w.r);
+    const data = weeks.map(w => byTokens ? w.t : w.r);
+    const fmtV = byTokens ? tok : int;
     const W = host.clientWidth; if (!W) return; const H = 236, m = { t:10, r:4, b:24, l:40 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b, yMax = niceMax(Math.max(...data)), ticks = [0,.5,1].map(f => f*yMax);
     const band = iw / data.length, bw = Math.max(4, band - Math.max(2, band * .28)), y = v => m.t + ih - v / yMax * ih;
     const svg = document.createElementNS(NS,'svg'); svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
-    svg.setAttribute('role','img'); svg.setAttribute('aria-label',`週ごとの応答数（${data.length}週間）`);
+    svg.setAttribute('role','img'); svg.setAttribute('aria-label', opts.aria || `週ごとの応答数（${data.length}週間）`);
     const rr = Math.min(4, bw/2);
     const bar = (x0, v) => { const top = y(v), b = y(0); if (b - top < rr) return `M${x0} ${b} V${top} H${x0+bw} V${b}Z`; return `M${x0} ${b} V${top+rr} Q${x0} ${top} ${x0+rr} ${top} H${x0+bw-rr} Q${x0+bw} ${top} ${x0+bw} ${top+rr} V${b}Z`; };
     const every = Math.max(1, Math.ceil(40 / band));
-    svg.innerHTML = `<g class="axis">${ticks.map(t=>`<line class="${t?'gridline':'baseline'}" x1="${m.l}" x2="${W-m.r}" y1="${y(t)}" y2="${y(t)}"/><text x="${m.l-8}" y="${y(t)+4}" text-anchor="end">${int(t)}</text>`).join('')}
-      ${weeks.map((w,i)=> (weeks.length-1-i) % every === 0 ? `<text x="${m.l + band*(i+.5)}" y="${H-6}" text-anchor="middle">${w.label}</text>` : '').join('')}</g>
+    svg.innerHTML = `<g class="axis">${ticks.map(t=>`<line class="${t?'gridline':'baseline'}" x1="${m.l}" x2="${W-m.r}" y1="${y(t)}" y2="${y(t)}"/><text x="${m.l-8}" y="${y(t)+4}" text-anchor="end">${t ? fmtV(t) : '0'}</text>`).join('')}
+      ${weeks.map((w,i)=> (opts.fromStart ? i : weeks.length-1-i) % every === 0 ? `<text x="${m.l + band*(i+.5)}" y="${H-6}" text-anchor="middle">${w.label}</text>` : '').join('')}</g>
       ${data.map((v,i)=>`<path class="bar" d="${bar(m.l + i*band + (band-bw)/2, v)}" style="${animate && !reduce ? 'transform:scaleY(0);' : ''}transition-delay:${i*45}ms"/>`).join('')}
       ${data.map((v,i)=>`<rect class="hit" data-i="${i}" x="${m.l+i*band}" y="${m.t}" width="${band}" height="${ih}" fill="transparent"/>`).join('')}`;
     host.prepend(svg);
@@ -476,7 +478,7 @@ const USAGE = /*DATA*/null/*END*/;
     svg.querySelectorAll('.hit').forEach(h => {
       h.addEventListener('pointerenter', () => { const i = +h.dataset.i, bx = svg.getBoundingClientRect();
         bars.forEach((b,j) => b.classList.toggle('dim', j !== i));
-        tip.innerHTML = `<span>${weeks[i].tip || (weeks[i].label + ' からの週')}</span><b>${int(data[i])}件</b><span>${tok(weeks[i].t)} トークン</span>`;
+        tip.innerHTML = `<span>${weeks[i].tip || (weeks[i].label + ' からの週')}</span><b>${byTokens ? tok(data[i]) + ' トークン' : int(data[i]) + '件'}</b><span>${byTokens ? '応答 ' + int(weeks[i].r) + '件' : tok(weeks[i].t) + ' トークン'}</span>`;
         tip.style.left = ((m.l + (i+.5)*band) / W * bx.width) + 'px'; tip.style.top = (y(data[i]) / H * bx.height) + 'px'; tip.style.opacity = 1; });
       h.addEventListener('pointerleave', () => { bars.forEach(b => b.classList.remove('dim')); tip.style.opacity = 0; });
     });
@@ -495,6 +497,16 @@ const USAGE = /*DATA*/null/*END*/;
     return USAGE.daily.filter(d => d.d >= from);
   }
   /* 棒グラフ: 7 日以内は日ごと、それより長い期間は週ごと */
+  /* 「今日」は時間帯ごとの棒グラフ、それ以外は日ごとの折れ線グラフ */
+  function hourlyItems() {
+    const hs = USAGE.hourly || [];
+    return Array.from({ length: 24 }, (_, h) => { const x = hs[h] || { t: 0, r: 0 };
+      return { label: h + '時', t: x.t, r: x.r, tip: `${USAGE.end} ${h}時台` }; });
+  }
+  function drawDay(host, animate) {
+    if (period === '1') barChart(host, hourlyItems(), animate, { key: 't', fromStart: true, aria: '今日の時間帯ごとのトークン数（0〜23時）' });
+    else areaChart(host, chartDays(), animate);
+  }
   function barData() {
     const p = +period;
     if (p > 0 && p <= 7) return { weekly: false, items: chartDays().map(d => ({ label: md(d.d), r: d.r, t: d.t, tip: jd(d.d) })) };
@@ -511,7 +523,9 @@ const USAGE = /*DATA*/null/*END*/;
     if (empty) return;
     const label = PERIOD_LABEL[period], rows = winRows(), bd = barData();
     document.querySelectorAll('[data-period-label]').forEach(el => el.textContent = label);
-    document.querySelectorAll('[data-day-note]').forEach(el => el.textContent = period === '1' ? '（今日は 1 日分のため、直近7日間を表示）' : '');
+    const hourlyMode = period === '1';
+    document.querySelectorAll('[data-day-note]').forEach(el => el.textContent = hourlyMode ? ' · 時間帯別（0〜23時）' : '');
+    ['dayTitle1', 'dayTitle2'].forEach(id => document.getElementById(id).textContent = hourlyMode ? '時間帯ごとのトークン数' : '1日あたりのトークン数');
     document.getElementById('weekTitle').textContent = bd.weekly ? '週ごとの応答数' : '日ごとの応答数';
     document.getElementById('weekNote').textContent = bd.weekly ? '月曜始まり・横軸は週の初日' : '横軸は日付';
 
@@ -564,7 +578,7 @@ const USAGE = /*DATA*/null/*END*/;
   /* ---------- loading → content ---------- */
   const body = document.body, dayHost = document.getElementById('dayChart'), weekHost = document.getElementById('weekChart'), dayHost2 = document.getElementById('dayChart2');
   let loading = false, timer;
-  function drawCharts(animate) { if (empty || loading) return; const cd = chartDays(); areaChart(dayHost, cd, animate); areaChart(dayHost2, cd, animate); barChart(weekHost, barData().items, animate);
+  function drawCharts(animate) { if (empty || loading) return; drawDay(dayHost, animate); drawDay(dayHost2, animate); barChart(weekHost, barData().items, animate);
     if (animate && !reduce) document.querySelectorAll('.share i').forEach(i => { const s = i.style.transform; i.style.transition = 'none'; i.style.transform = 'scaleX(0)'; i.offsetWidth; i.style.transition = ''; i.style.transform = s; }); }
   function load() {
     clearTimeout(timer); loading = true; body.classList.add('is-loading'); renderKpis();
@@ -595,7 +609,7 @@ const USAGE = /*DATA*/null/*END*/;
     document.querySelectorAll('.nav a').forEach(n => n.removeAttribute('aria-current'));
     document.querySelector(`.nav a[data-view="${v}"]`)?.setAttribute('aria-current','page');
     document.getElementById('viewTitle').textContent = titles[v]; store.set('ll-view', v); drawer(false); scrollTo(0, 0);
-    if (v === 'tokens' && !empty && !loading) requestAnimationFrame(() => areaChart(dayHost2, chartDays(), true)); };
+    if (v === 'tokens' && !empty && !loading) requestAnimationFrame(() => drawDay(dayHost2, true)); };
   document.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); showView(a.dataset.view); }));
   showView(location.hash.slice(1) || store.get('ll-view') || 'overview');
   addEventListener('keydown', e => {

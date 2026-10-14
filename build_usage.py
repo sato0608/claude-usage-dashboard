@@ -92,6 +92,12 @@ def build(rows):
     kpi_sets = {str(n): kpi_set(n) for n in (1, 7, 30, 90, 0)}
     kpis = kpi_sets['7']  # 古いテンプレートとの互換用
 
+    # 今日の時間帯別（0〜23 時）の使用量
+    hourly = [dict(h=h, t=0, r=0) for h in range(24)]
+    for r in rows:
+        if r['day'] == today:
+            hourly[r['ts'].hour]['t'] += r['inp'] + r['out']; hourly[r['ts'].hour]['r'] += 1
+
     weeks = collections.OrderedDict()
     for x in daily:
         d = dt.date.fromisoformat(x['d'])
@@ -140,7 +146,7 @@ def build(rows):
 
     return dict(sessions=sessions, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), start=start.isoformat(), end=today.isoformat(),
                 totals=dict(t=sum(r['inp'] + r['out'] for r in rows), r=len(rows), s=len({r['session'] for r in rows})),
-                daily=daily, dpm=dpm, kpis=kpis, kpi_sets=kpi_sets, weeks=list(weeks.values()), projects=projects, models=models)
+                daily=daily, hourly=hourly, dpm=dpm, kpis=kpis, kpi_sets=kpi_sets, weeks=list(weeks.values()), projects=projects, models=models)
 
 
 if __name__ == '__main__':
