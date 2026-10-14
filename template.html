@@ -251,6 +251,13 @@ body.is-loading .skeleton{display:block}
         <div class="sub" id="subline">このMacのログから集計</div>
       </div>
       <div class="tools">
+        <div class="seg" id="periodSeg" role="group" aria-label="集計期間">
+          <button type="button" data-p="1">今日</button>
+          <button type="button" data-p="7">7日</button>
+          <button type="button" data-p="30">30日</button>
+          <button type="button" data-p="90">90日</button>
+          <button type="button" data-p="0">全期間</button>
+        </div>
         <button class="btn" id="replayBtn"><svg class="icon"><use href="#i-refresh"/></svg>読み込みを再生</button>
         <button class="btn" id="themeBtn" aria-label="テーマを切り替え"><svg class="icon"><use id="themeIcon" href="#i-sun"/></svg></button>
       </div>
@@ -382,16 +389,21 @@ const USAGE = /*DATA*/null/*END*/;
     const last = pts[pts.length-1];
     return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${line} L${last[0]} ${h} L${p} ${h}Z" fill="var(--accent-soft)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.6" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5"/></svg>`;
   }
+  /* 集計期間（今日 / 7日 / 30日 / 90日 / 全期間）。選択はこのブラウザに記憶する */
+  const PERIOD_LABEL = { '1':'今日', '7':'直近7日間', '30':'直近30日間', '90':'直近90日間', '0':'全期間' };
+  const PERIOD_VS = { '1':'前日比', '7':'前の7日間比', '30':'前の30日間比', '90':'前の90日間比', '0':'' };
+  let period = store.get('ll-period'); if (!(period in PERIOD_LABEL)) period = '7';
   function renderKpis() {
     document.querySelectorAll('[data-kpi]').forEach(el => {
-      const k = empty ? null : USAGE.kpis[+el.dataset.kpi];
+      const set = empty ? null : ((USAGE.kpi_sets && USAGE.kpi_sets[period]) || USAGE.kpis);
+      const k = set ? set[+el.dataset.kpi] : null;
       const label = k ? k.label : ['トークン合計','出力トークン','セッション数','応答数'][+el.dataset.kpi];
       const val = k ? (k.fmt === 'tok' ? tok(k.value) : int(k.value)) : '—';
-      const delta = k && k.delta !== null ? `<span class="delta neutral">${k.delta >= 0 ? '+' : '−'}${Math.abs(k.delta)}%</span> <span class="vs">前の7日間比</span>` : '<span class="vs">比較できる記録がありません</span>';
+      const delta = k && k.delta !== null ? `<span class="delta neutral">${k.delta >= 0 ? '+' : '−'}${Math.abs(k.delta)}%</span> <span class="vs">${PERIOD_VS[period]}</span>` : '<span class="vs">' + (period === '0' ? '全期間の合計' : '比較できる記録がありません') + '</span>';
       el.innerHTML = `
         <div class="skeleton"><div class="sk sk-line" style="width:45%"></div><div class="sk sk-val"></div><div class="sk sk-line" style="width:30%;margin:0"></div></div>
         <div class="content">
-          <div class="k-label">${label}<span class="vs">· 直近7日間</span></div>
+          <div class="k-label">${label}<span class="vs">· ${PERIOD_LABEL[period]}</span></div>
           <div class="k-val" data-final="${val}">${val}</div>
           <div class="k-row"><div>${delta}</div>${k ? sparkSVG(k.spark) : ''}</div>
         </div>`;
@@ -505,6 +517,12 @@ const USAGE = /*DATA*/null/*END*/;
   const ro = new ResizeObserver(() => { clearTimeout(ro.t); ro.t = setTimeout(() => drawCharts(false), 80); });
   ro.observe(dayHost); ro.observe(weekHost); ro.observe(dayHost2);
   document.getElementById('replayBtn').onclick = load;
+  const seg = document.getElementById('periodSeg');
+  const syncSeg = () => seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === period)));
+  seg.addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (!b || b.dataset.p === period) return;
+    period = b.dataset.p; store.set('ll-period', period); syncSeg();
+    if (!empty && !loading) { renderKpis(); countUp(); } });
+  syncSeg();
 
   /* ---------- sidebar ---------- */
   const app = document.getElementById('app'), cbtn = document.getElementById('collapseBtn');

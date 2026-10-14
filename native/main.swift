@@ -14,9 +14,16 @@ let htmlURL = dashboardURL.appendingPathComponent("claude-usage-dashboard.html")
 let logURL = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Logs/claude-usage-dashboard.log")
 
-struct Stats {
-    var today = 0, todayResponses = 0, week = 0
+struct DayStat {
+    let day: String
+    let tokens: Int
+    let responses: Int
 }
+
+/// 表示できる期間。days が 0 のときは全期間
+let periods: [(days: Int, name: String)] = [
+    (1, "今日"), (7, "直近7日間"), (30, "直近30日間"), (0, "全期間"),
+]
 
 func tok(_ n: Int) -> String {
     let v = Double(n)
@@ -26,8 +33,8 @@ func tok(_ n: Int) -> String {
     return String(n)
 }
 
-/// 集計済み HTML に埋め込まれた JSON から、今日と直近 7 日の数字を取り出す
-func loadStats() -> Stats? {
+/// 集計済み HTML に埋め込まれた JSON から、日別の数字を取り出す
+func loadDaily() -> [DayStat]? {
     guard let s = try? String(contentsOf: htmlURL, encoding: .utf8),
           let a = s.range(of: "/*DATA*/"),
           let b = s.range(of: "/*END*/", range: a.upperBound..<s.endIndex) else { return nil }
@@ -35,19 +42,26 @@ func loadStats() -> Stats? {
     guard json != "null",
           let obj = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let daily = obj["daily"] as? [[String: Any]] else { return nil }
+    return daily.compactMap { d in
+        guard let day = d["d"] as? String, let t = d["t"] as? Int else { return nil }
+        return DayStat(day: day, tokens: t, responses: d["r"] as? Int ?? 0)
+    }
+}
+
+/// 今日を含む直近 days 日の合計（days が 0 なら全期間）
+func total(_ daily: [DayStat], days: Int) -> (tokens: Int, responses: Int) {
     let f = DateFormatter()
     f.locale = Locale(identifier: "en_US_POSIX")
     f.dateFormat = "yyyy-MM-dd"
     let now = Date()
     let today = f.string(from: now)
-    let cutoff = f.string(from: now.addingTimeInterval(-6 * 86400))
-    var st = Stats()
-    for d in daily {
-        guard let day = d["d"] as? String, let t = d["t"] as? Int else { continue }
-        if day == today { st.today = t; st.todayResponses = d["r"] as? Int ?? 0 }
-        if day >= cutoff && day <= today { st.week += t }
+    let cutoff = days > 0 ? f.string(from: now.addingTimeInterval(Double(-(days - 1)) * 86400)) : "0000-00-00"
+    var t = 0, r = 0
+    for d in daily where d.day >= cutoff && d.day <= today {
+        t += d.tokens
+        r += d.responses
     }
-    return st
+    return (t, r)
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -55,7 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
     var webView: WKWebView?
     var busy = false
-    var stats: Stats?
+    var daily: [DayStat]?
+    // メニューバーに表示する期間（日数）。選択は記憶する
+    var barDays: Int = {
+        let v = UserDefaults.standard.object(forKey: "barDays") as? Int ?? 1
+        return periods.contains { $0.days == v } ? v : 1
+    }()
     var lastUpdated: Date?
     var timer: Timer?
 
@@ -66,7 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             img.isTemplate = true
             statusItem.button?.image = img
         }
-        stats = loadStats()
+        daily = loadDaily()
         updateStatusItem()
         refresh()
         timer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in self?.refresh() }
@@ -89,16 +108,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: ステータス表示
 
     func updateStatusItem() {
-        statusItem.button?.title = stats.map { " " + tok($0.today) } ?? ""
+        if let d = daily {
+            statusItem.button?.title = " " + tok(total(d, days: barDays).tokens)
+        } else {
+            statusItem.button?.title = ""
+        }
         let menu = NSMenu()
         func label(_ s: String) {
             let item = NSMenuItem(title: s, action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
         }
-        if let s = stats {
-            label("今日: \(tok(s.today)) トークン（応答 \(s.todayResponses) 件）")
-            label("直近7日間: \(tok(s.week)) トークン")
+        if let d = daily {
+            for p in periods {
+                let s = total(d, days: p.days)
+                label("\(p.name): \(tok(s.tokens)) トークン（応答 \(s.responses) 件）")
+            }
         } else {
             label("集計データがありません")
         }
@@ -107,6 +132,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             label("最終更新: \(f.string(from: t))")
         }
         menu.addItem(.separator())
+
+        // メニューバーに表示する期間
+        let barItem = NSMenuItem(title: "メニューバーに表示する期間", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for p in periods {
+            let item = NSMenuItem(title: p.name, action: #selector(selectPeriod(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = p.days
+            item.state = p.days == barDays ? .on : .off
+            sub.addItem(item)
+        }
+        barItem.submenu = sub
+        menu.addItem(barItem)
+        menu.addItem(.separator())
+
         let open = NSMenuItem(title: "ダッシュボードを開く", action: #selector(openDashboard), keyEquivalent: "o")
         open.target = self
         menu.addItem(open)
@@ -123,6 +163,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
+    @objc func selectPeriod(_ sender: NSMenuItem) {
+        barDays = sender.tag
+        UserDefaults.standard.set(barDays, forKey: "barDays")
+        updateStatusItem()
+    }
+
     // MARK: 集計
 
     @objc func refresh() {
@@ -134,7 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self.busy = false
                 if ok {
-                    self.stats = loadStats()
+                    self.daily = loadDaily()
                     self.lastUpdated = Date()
                     self.reloadWebView()
                 } else {

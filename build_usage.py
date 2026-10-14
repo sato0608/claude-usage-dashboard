@@ -74,14 +74,23 @@ def build(rows):
         sel = [r for r in rows if lo <= r['day'] <= hi]
         return dict(t=sum(r['inp'] + r['out'] for r in sel), o=sum(r['out'] for r in sel),
                     r=len(sel), s=len({r['session'] for r in sel}))
-    cur, prev = window(6, 0), window(13, 7)
-    last28 = daily[-28:]
-    kpis = []
-    for key, label, fmt in [('t', 'トークン合計', 'tok'), ('o', '出力トークン', 'tok'),
-                            ('s', 'セッション数', 'int'), ('r', '応答数', 'int')]:
-        delta = None if not prev[key] else round((cur[key] / prev[key] - 1) * 100, 1)
-        kpis.append(dict(label=label, value=cur[key], fmt=fmt, delta=delta,
-                         spark=[x[key] for x in last28]))
+    # 期間ごとの指標。キーは日数（0 は全期間）。n 日 = 今日を含む直近 n 日と、その前の n 日との比較
+    def kpi_set(n):
+        if n:
+            cur, prev = window(n - 1, 0), window(2 * n - 1, n)
+            spark_days = daily[-max(28, n):]
+        else:
+            cur, prev = window((today - start).days, 0), None
+            spark_days = daily
+        out = []
+        for key, label, fmt in [('t', 'トークン合計', 'tok'), ('o', '出力トークン', 'tok'),
+                                ('s', 'セッション数', 'int'), ('r', '応答数', 'int')]:
+            delta = None if not prev or not prev[key] else round((cur[key] / prev[key] - 1) * 100, 1)
+            out.append(dict(label=label, value=cur[key], fmt=fmt, delta=delta,
+                            spark=[x[key] for x in spark_days]))
+        return out
+    kpi_sets = {str(n): kpi_set(n) for n in (1, 7, 30, 90, 0)}
+    kpis = kpi_sets['7']  # 古いテンプレートとの互換用
 
     weeks = collections.OrderedDict()
     for x in daily:
@@ -120,7 +129,7 @@ def build(rows):
 
     return dict(sessions=sessions, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), start=start.isoformat(), end=today.isoformat(),
                 totals=dict(t=sum(r['inp'] + r['out'] for r in rows), r=len(rows), s=len({r['session'] for r in rows})),
-                daily=daily, kpis=kpis, weeks=list(weeks.values()), projects=projects, models=models)
+                daily=daily, kpis=kpis, kpi_sets=kpi_sets, weeks=list(weeks.values()), projects=projects, models=models)
 
 
 if __name__ == '__main__':
